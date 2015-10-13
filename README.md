@@ -5,4 +5,4 @@
 
 ![](coverageScreen.png)
 
-![](coverageScreen2.png)
+![](coverageScreen1.png)
