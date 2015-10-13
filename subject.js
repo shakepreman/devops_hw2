@@ -4,7 +4,7 @@ function inc(p, q){
    if(q ==undefined) q =1;
    if( p < 0 )
    {
-   	p = -p;
+    p = -p;
    }
    return p + q/q;
 }
@@ -39,9 +39,9 @@ function weird(x,y,z, mode)
 
 function fileTest(dir, filePath)
 {
-	if (!fs.existsSync(dir)){
+  if (!fs.existsSync(dir)){
 
-   	    return false;
+        return false;
     }
     
     var files = fs.readdirSync(dir);
@@ -52,13 +52,13 @@ function fileTest(dir, filePath)
 
    if( fs.existsSync(filePath ))
    {
-		var buf = fs.readFileSync(filePath, "utf8");
-		if( buf.length > 0 )
-		{
-			return true;
-		}
-		return false;
-	}
+    var buf = fs.readFileSync(filePath, "utf8");
+    if( buf.length > 0 )
+    {
+      return true;
+    }
+    return false;
+  }
 }
 
 function normalize(phoneNumber) {
@@ -87,13 +87,13 @@ function format(phoneNumber, formatString, options)
 
 function blackListNumber(phoneNumber)
 {
-	var num = format(phoneNumber, "(NNN) NNN-NNNN");
-	var area = num.substring(1,4);
-	if( area == "212" )
-	{
-		return true;
-	}
-	return false;
+  var num = format(phoneNumber, "(NNN) NNN-NNNN");
+  var area = num.substring(1,4);
+  if( area == "212" )
+  {
+    return true;
+  }
+  return false;
 }
 
 exports.fileTest = fileTest;
