@@ -93,6 +93,18 @@ function generateTestCases()
 	for ( var funcName in functionConstraints )
 	{
 		var params = {};
+		var threeDigitList = [];
+		for(i=0; i<1000;i++){
+			if(i<10)
+				threeDigitList.push("00"+i)
+			else if(i<100)
+				threeDigitList.push("0"+i)
+			else
+				threeDigitList.push(""+i)
+
+		}
+		var hasPhoneNum = false;
+		var hasOption  =false;
 
 		// initialize params
 		for (var i =0; i < functionConstraints[funcName].params.length; i++ )
@@ -100,6 +112,12 @@ function generateTestCases()
 			var paramName = functionConstraints[funcName].params[i];
 			//params[paramName] = '\'' + faker.phone.phoneNumber()+'\'';
 			params[paramName] = ['\'\''];
+			if(paramName == "phoneNumber"){
+				hasPhoneNum =true;
+			}
+			if(paramName == "options"){
+				hasOption = true;
+			}
 		}
 
 		//console.log( params );
@@ -116,7 +134,7 @@ function generateTestCases()
 			var constraint = constraints[c];
 			if( params.hasOwnProperty( constraint.ident ) )
 			{
-				if(constraint.ident != "dir" || constraint.ident != "filePath"){
+				if(constraint.ident != "dir" && constraint.ident != "filePath"){
 					params[constraint.ident].push(constraint.value);
 				}
 				else if((constraint.ident == "dir" && constraint.kind == "fileExists") || (constraint.ident == "filePath" && constraint.kind == "fileWithContent")){
@@ -145,7 +163,20 @@ function generateTestCases()
 			}
 		}
 
+		if(hasPhoneNum){ 
+			for (var i=0; i< threeDigitList.length; i++) {
+				var finalNum = "'" + threeDigitList[i]+ "9999999'";
+				params["phoneNumber"] = finalNum;
+				if(hasOption)
+				{
+					params["options"] = "'qwe'"
+				}
 
+				var args = Object.keys(params).map( function(k) {return params[k]; }).join(",");
+				content += "subject.{0}({1});\n".format(funcName, args );
+			}
+
+		}
 
 	}
 
