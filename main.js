@@ -67,8 +67,23 @@ var mockFileLibrary =
 		pathContent: 
 		{	
   			file1: 'text content',
+		},
+		pathContent2: 
+		{	
+  			file2: '',
 		}
 	}
+};
+
+// Generates Cartesian Product.
+function permutation_generator(list) {
+    return _.reduce(list, function(a, b) {
+        return _.flatten(_.map(a, function(x) {
+            return _.map(b, function(y) {
+                return x.concat([y]);
+            });
+        }), true);
+    }, [ [] ]);
 };
 
 function generateTestCases()
@@ -84,7 +99,7 @@ function generateTestCases()
 		{
 			var paramName = functionConstraints[funcName].params[i];
 			//params[paramName] = '\'' + faker.phone.phoneNumber()+'\'';
-			params[paramName] = '\'\'';
+			params[paramName] = ['\'\''];
 		}
 
 		//console.log( params );
@@ -101,25 +116,36 @@ function generateTestCases()
 			var constraint = constraints[c];
 			if( params.hasOwnProperty( constraint.ident ) )
 			{
-				params[constraint.ident] = constraint.value;
+				if(constraint.ident != "dir" || constraint.ident != "filePath"){
+					params[constraint.ident].push(constraint.value);
+				}
+				else if((constraint.ident == "dir" && constraint.kind == "fileExists") || (constraint.ident == "filePath" && constraint.kind == "fileWithContent")){
+					params[constraint.ident].push(constraint.value);
+				}
+			}
+
+		}
+		
+		var args = Object.keys(params).map( function(k) {return params[k]; });
+		args = permutation_generator(args);
+
+		for(i=0; i<args.length; i++){
+			content += "subject.{0}({1});\n".format(funcName, args[i] );
+			var args1 = args[i].join(',');
+			if(args1 == "'',''"){
+				continue;
+			}
+			if( pathExists || fileWithContent )
+			{
+				content += generateMockFsTestCases(pathExists,fileWithContent,funcName, args1);
+				// Bonus...generate constraint variations test cases....
+				content += generateMockFsTestCases(!pathExists,fileWithContent,funcName, args1);
+				content += generateMockFsTestCases(pathExists,!fileWithContent,funcName, args1);
+				content += generateMockFsTestCases(!pathExists,!fileWithContent,funcName, args1);
 			}
 		}
 
-		// Prepare function arguments.
-		var args = Object.keys(params).map( function(k) {return params[k]; }).join(",");
-		if( pathExists || fileWithContent )
-		{
-			content += generateMockFsTestCases(pathExists,fileWithContent,funcName, args);
-			// Bonus...generate constraint variations test cases....
-			content += generateMockFsTestCases(!pathExists,fileWithContent,funcName, args);
-			content += generateMockFsTestCases(pathExists,!fileWithContent,funcName, args);
-			content += generateMockFsTestCases(!pathExists,!fileWithContent,funcName, args);
-		}
-		else
-		{
-			// Emit simple test case.
-			content += "subject.{0}({1});\n".format(funcName, args );
-		}
+
 
 	}
 
@@ -172,26 +198,103 @@ function constraints(filePath)
 			// Check for expressions using argument.
 			traverse(node, function(child)
 			{
-				if( child.type === 'BinaryExpression' && child.operator == "==")
+				if( child.type === 'BinaryExpression')
 				{
+					if(child.operator == "==" && child.left.type == 'CallExpression'){
+						if(child.left.callee.property.type == 'Identifier' && child.left.callee.property.name == 'indexOf'){
+							var tempStr = child.left.arguments[0].value;
+							var tempStr1 = "";
+							var tempNum = child.right.value;
+							for(i=0; i<tempNum; i++){
+								tempStr1 = tempStr1+"a";
+							}
+							tempStr1=tempStr1+tempStr;
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.callee.object.name,
+									value: "'"+tempStr1+"'",
+								}));
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.callee.object.name,
+									value: "''",
+								}));
+						}
+					}
 					if( child.left.type == 'Identifier' && params.indexOf( child.left.name ) > -1)
 					{
 						// get expression from original source code:
 						var expression = buf.substring(child.range[0], child.range[1]);
 						var rightHand = buf.substring(child.right.range[0], child.right.range[1])
 
-						functionConstraints[funcName].constraints.push( 
-							new Constraint(
-							{
-								ident: child.left.name,
-								value: rightHand,
-								funcName: funcName,
-								kind: "integer",
-								operator : child.operator,
-								expression: expression
-							}));
+						if((child.operator == "==")||(child.operator == "!=")){
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand,
+								}));
+
+
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: "''",
+								}));
+						}
+
+						if((child.operator == "<")||(child.operator == "<=")){
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand
+								}));
+
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand+1
+								}));
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand-1
+								}));
+
+						}
+
+						if((child.operator == ">")||(child.operator == ">=")){
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand
+								}));
+
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand-1
+								}));
+							functionConstraints[funcName].constraints.push( 
+								new Constraint(
+								{
+									ident: child.left.name,
+									value: rightHand+1
+								}));
+
+						}
+
 					}
 				}
+
 
 				if( child.type == "CallExpression" && 
 					 child.callee.property &&
@@ -206,6 +309,17 @@ function constraints(filePath)
 							{
 								ident: params[p],
 								value:  "'pathContent/file1'",
+								funcName: funcName,
+								kind: "fileWithContent",
+								operator : child.operator,
+								expression: expression
+							}));
+
+							functionConstraints[funcName].constraints.push( 
+							new Constraint(
+							{
+								ident: params[p],
+								value:  "'pathContent2/file2'",
 								funcName: funcName,
 								kind: "fileWithContent",
 								operator : child.operator,
@@ -231,6 +345,18 @@ function constraints(filePath)
 								value:  "'path/fileExists'",
 								funcName: funcName,
 								kind: "fileExists",
+								operator : child.operator,
+								expression: expression
+							}));
+
+							functionConstraints[funcName].constraints.push( 
+							new Constraint(
+							{
+								ident: params[p],
+								// A fake path to a file
+								value:  "'pathContent/file1'",
+								funcName: funcName,
+								kind: "fileWithContent",
 								operator : child.operator,
 								expression: expression
 							}));
