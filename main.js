@@ -169,7 +169,7 @@ function generateTestCases()
 				params["phoneNumber"] = finalNum;
 				if(hasOption)
 				{
-					params["options"] = "'ispresent'"
+					params["options"] = "'foo'"
 				}
 
 				var args = Object.keys(params).map( function(k) {return params[k]; }).join(",");
